@@ -1,0 +1,1 @@
+/usr/bin/c++  -g   CMakeFiles/SerialSBMS_Esp8266.dir/Battery.cpp.o CMakeFiles/SerialSBMS_Esp8266.dir/config.cpp.o CMakeFiles/SerialSBMS_Esp8266.dir/MyWifi.cpp.o CMakeFiles/SerialSBMS_Esp8266.dir/OTA.cpp.o CMakeFiles/SerialSBMS_Esp8266.dir/SBMS.cpp.o  -o SerialSBMS_Esp8266 

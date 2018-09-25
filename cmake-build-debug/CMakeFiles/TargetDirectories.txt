@@ -1,0 +1,3 @@
+/home/fprumbau/Arduino/SerialSBMS_Esp8266/cmake-build-debug/CMakeFiles/edit_cache.dir
+/home/fprumbau/Arduino/SerialSBMS_Esp8266/cmake-build-debug/CMakeFiles/rebuild_cache.dir
+/home/fprumbau/Arduino/SerialSBMS_Esp8266/cmake-build-debug/CMakeFiles/SerialSBMS_Esp8266.dir

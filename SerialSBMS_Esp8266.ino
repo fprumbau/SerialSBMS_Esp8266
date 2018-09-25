@@ -1,0 +1,568 @@
+#include <SoftwareSerial.h>
+#include <ESP8266WebServer.h>
+#include <ESP8266mDNS.h>
+#include <WebSocketsServer.h>
+
+#include <Ticker.h>
+#include "MyWifi.h"
+#include "webpage.h"
+#include "config.h"
+#include "SBMS.h"
+#include "Taster.h"
+#include "Relay.h"
+#include "Battery.h"
+#include "OTA.h"
+
+OTA ota;
+SBMS sbms;
+CFG config;
+MyWifi myWifi;
+Battery battery;
+ESP8266WebServer server(80);
+WebSocketsServer wsServer = WebSocketsServer(81);
+
+const char* host = "esp8266B";
+
+//client connected to send?
+volatile bool ready = false;
+
+uint8_t clientCount=0;
+uint8_t clients[256] = {-1};
+bool notifiedNoClient = false;
+
+Ticker ticker;
+int counter = 0;
+const char* data;
+
+bool debug = false;
+bool debug2 = false;
+
+long soc = -1; //aktueller Wert State Of Charge
+int cv[8]; //aktuelle Zellspannungen
+//Empfangstimeout ( wird 10s nichts empfangen, muss die Batterie abgeschaltet werden )
+long timeout = 10000; 
+unsigned long lastReceivedMillis = -1;
+long timerCount=0;
+//findet die Interruptmethode falsche Werte vor, so wird noch einmal
+//(4s) gewartet, bevor diese tatsächlich zu einem Fehler führen.
+int failureCount = 0;
+const int errLimit = 3;
+
+unsigned long wsServerLastSend = -1;
+
+int LED_RED = 16;
+int LED_GREEN = 5;
+int LED_BLUE = 0;
+
+//weil der esp8266 nur ein UART fuer RX/TX hat, das zweite hat nur TX
+SoftwareSerial mySerial(13, 15, false, 256);
+
+/*
+ * Schreibt die Webseite in Teilen (<6kb)
+ * auf den Webclient, der sich gerade verbunden
+ * hat. Es ist wichtig, hier die korrekte
+ * Laenge des contents zu senden. Weitere Teile
+ * sollten immer mit server.sendContent_P(partN)
+ * versendet werden. Das _P ist hier wichtig, da
+ * die Seitendefinition im PROGMEM liegen (s. webpage.h)
+ */
+void sbmsPage() {
+  long s1 = sizeof(part1);
+  long s2 = sizeof(part2);
+  long totalSize = s1 + s2;
+  if(debug) {
+    Serial.print("\np1: ");
+    Serial.println(s1);
+    Serial.print("p2: ");
+    Serial.println(s2);
+    Serial.print("total: ");
+    Serial.println(totalSize);
+    Serial.println("");
+  }
+  server.setContentLength(totalSize);
+  server.send_P(200, "text/html", part1);
+  server.sendContent_P(part2);
+}
+
+/**
+ * Sende Daten zu allen über Websockets verbundenen
+ * Clients. Alles, was NICHT SBMS-Daten sind, also
+ * Fehler- bzw. Statusmeldungen MUSS mit einem '@'
+ * eingeleitet werden, sonst wird es von der Webseite
+ * falsch interpretiert und führt zu wilden Werten
+ * z.B. beim Batteriestatus.
+ */
+void sendClients(String msg, bool data) {
+  if(clientCount<=0) {
+    return;
+  }
+  if(wsServerLastSend>0 && (millis()-wsServerLastSend) < 100) {
+    if(debug) {
+      Serial.print("Could not send data multiple times in 100ms; disgarding ");
+      Serial.println(data); 
+    }
+    return;
+  }
+  wsServerLastSend = millis();
+  for(int m=0; m<clientCount; m++) {
+     uint8_t client = clients[m];
+     if(debug) {
+       Serial.printf("Sending client %u ( %u ) from %u clients\n", (m+1), client, clientCount);
+     }
+     if(!data) {
+        msg = "@ " + msg;
+     }
+     wsServer.sendTXT(client, msg);
+  }
+}
+
+/**
+ * Websocket-Events, wenn neue Clients sich verbinden, wenn die clients
+ * selbst senden oder wenn sie geschlossen werden.
+ */
+void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length) {
+
+    switch(type) {
+        case WStype_DISCONNECTED: {
+            //Client 'num' aus Liste rausnehmen
+            uint8_t newClients[256];
+            for(int a=0; a<256; a++) {
+              newClients[a] = clients[a];
+            }
+            int c=0;
+            for(int x=0; x < clientCount; x++) {
+              if(num != newClients[x]) {
+                clients[c] = newClients[x];
+                c++;
+              } else {
+                clientCount--;
+              }
+            }
+            if(clientCount == 0) {
+              notifiedNoClient = false;
+              ready = false;
+            }
+            Serial.printf("[%u] Disconnected! Remaining %u\n", num, clientCount);
+            break; }
+        case WStype_CONNECTED: {
+            IPAddress ip = wsServer.remoteIP(num);
+            Serial.println("");            
+
+            // send message to client
+            wsServer.sendTXT(num, "@ Connected");
+
+            bool alreadyListed = false;
+            int y = 0;
+            for(; y < clientCount; y++) {
+              if(num == clients[y]) {
+                alreadyListed = true;
+                break;
+              }
+            }
+            if(!alreadyListed) {
+              clients[y]=num;
+              clientCount++;
+            }
+            Serial.printf("[%u] Connected from %d.%d.%d.%d url: %s; ConnCount: %u\n", num, ip[0], ip[1], ip[2], ip[3], payload, clientCount);
+            ready = true;
+
+            //Relaistatus uebermitteln
+            relayStatus = digitalRead(RELAY_PIN);
+            String msg = "Batteriestatus: "; //wird die Message von @ eingeleitet, wird sie nicht als SBMS-Datum interpretiert!
+            if(relayStatus == 0) {
+                msg += "LOW";
+            } else {
+                msg += "HIGH";
+            }
+            sendClients(msg, false);
+   
+            break; }
+        case WStype_TEXT:
+            Serial.printf("[Client %u] received: %s\n", num, payload);
+
+            if(payload[0] == '@') {
+              if(payload[1] == '+') {
+                 starteBatterie("Websockets");                
+              } else if(payload[1] == '-') {
+                 starteNetzvorrang("Websockets");                
+              }           
+              if(payload[1] == 'd') {                
+                 toggleDebug(payload);
+              }              
+            }
+            break;
+    }
+}
+
+//nicht auf Serial1 warten, Feste Werte annehmen
+bool testFixed = true;
+
+void readSbms() {
+
+  String sread = "";
+
+  if(!testFixed) {
+    while(mySerial.available()) {
+      char c = mySerial.read();
+      sread+=c;
+      delay(1);
+    }
+  } else {
+    //sread = "5+'/,D$+HNGpGtGuGkH9H5HD+J##-#$'#####&##################$|(";
+    //sread = "5+'0GT$,I+GvG|H#GnH[HUHs+T##-##|##%##(##################%{*";
+    sread = "5+'0GT$,I+GvG|H#GnH[HUHs+T##-##|##%##(##################%{*";
+  }
+  
+  /**
+   * Solange etwas empfangen wird (sread gefuellt) sollte ausgewertet werden.
+   * Wenn aber der Timeout zuschlaegt, dann fuehrt das Lesen der nicht empfangenen
+   * Werte, dazu, soc und cv[] zurueckzusetzen, woraufhin der naechste Lauf der
+   * Interruptmethode ISR(TIMER1_COMPA_vect) dazu, dass die Status-LED auf rot schaltet.
+   * Gleichzeitig ist es nicht mehr möglich, auf Batterie zu wechseln.
+   * 
+   * Ist die Batterie gerade aktiv, wird das Relais wieder zurückgeschaltet (normal connected) 
+   * und damit der Netzvorrang aktiv.
+   */
+  if(sread.length() > 1 || ( millis() - lastReceivedMillis ) > timeout ) {
+      if(( millis() - lastReceivedMillis ) > 3000) { //Verarbeitung hoechstens alle 3 Sekunde
+          evaluate(sread);
+      }
+  }
+}
+
+/**
+ * Toggle: 
+ * - @d1-true
+ * - @d1-false
+ * - @d2-true
+ * - @d2-false
+ */
+void toggleDebug(unsigned char* payload) {
+  String msg;
+  bool dbgVar;
+  if(payload[2]=='1') {
+    //debug
+    dbgVar=&debug;
+    msg+="Switched debug to ";
+  } else {
+    //debug2
+     dbgVar=&debug2;
+     msg+="Switched debug2 to ";
+  }
+  if(payload[4]=='t') {
+    dbgVar = true;
+    msg+=true;
+  } else {
+    dbgVar = false;
+    msg+=false;
+  }
+  Serial.println(msg);
+  sendClients(msg, false);
+}
+
+/**
+ * Auswertung des vom SBMS120 über Seriell
+ * empfangenen Datenpakets.
+ */
+void evaluate(String& sread) {
+
+    if(debug2) Serial.println(sread);
+
+    if(ready) {
+         if(debug2) {
+            Serial.print("Length: ");
+            Serial.println(sread.length());
+         }        
+         if(sread.length() > 0) {    
+            sendClients(sread, true);
+         }     
+    } else {
+        if(!notifiedNoClient) {
+          notifiedNoClient = true;
+          Serial.println("no client connected, yet");
+        }
+    }
+    
+    int len = sread.length();
+    char txt[len];
+    sread.toCharArray(txt, len);
+
+    String outString = "\nSOC: ";
+    soc = sbms.dcmp(6, 2, txt, len);    
+    outString += soc;
+    outString += " ( Limit: ";
+    outString += battery.SOC_LIMIT;
+    outString += " ) \n";
+
+    for(int k=0; k<8; k++) {
+      int loc = k * 2 + 8;
+      cv[k] = sbms.dcmp(loc, 2, txt, len);
+      
+      outString += "\ncv";
+      outString += ( k + 1 );
+      outString += ": ";
+      outString += cv[k];
+    }
+
+    //Werte    
+    if(debug2) {
+      Serial.println(outString);
+      Serial.print("StopBattery: ");
+      Serial.println(battery.stopBattery);
+      Serial.println("_______________________________________");
+    }
+
+   
+    //Timeoutcounter nur zuruecksetzen, wenn etwas empfangen wurde
+    if(sread.length() > 1) {
+         lastReceivedMillis = millis();
+    } 
+}
+
+/*
+ * Interrupthandler, der in einem in der setup-Funktion definierten
+ * Zeitinterval aufgerufen wird.
+ * 
+ * ticker.attach(3, isrHandler);
+ * 
+ * Hier: alle 3 Sekunden.
+ * 
+ * Alle Werte, auf die die Loop-Methode und aus ihr gerufene
+ * Werte UND diese Funktion zugreifen wollen, sollten als volatile
+ * definiert werden.
+ * 
+ * Aktuell 
+ */
+void isrHandler(void)  {
+  if(soc < 0) return; //die Main-Loop sollte erstmal Werte lesen 
+
+  /*if(testFixed) {
+    return; //keine Auswertung, wenn Testwerte
+  }*/
+
+  timerCount++;
+
+  boolean stop = false;
+  String message = "";
+  if (soc < battery.SOC_LIMIT) {
+    message = "State of charge below ";
+    message += battery.SOC_LIMIT;
+    message += "%";
+    stop = true; 
+  }
+  if(!stop) {
+    for(int k=0; k<7; k++) {
+      if(cv[k] < battery.LOW_VOLTAGE_MILLIS) {
+        message = "Undervoltage cell: ";
+        message += k;
+        stop = true; 
+      }
+    }
+  }
+  if(debug) {
+    Serial.println("");
+    Serial.print("Value evaluation message: ");
+    Serial.println(message);
+    Serial.print("Stop-value: ");
+    Serial.println(stop);
+    Serial.print("SOC: ");
+    Serial.println(soc);
+    for(int j=0; j<7; j++) {
+        Serial.print("CV[");
+        Serial.print(j);
+        Serial.print("]: ");
+        Serial.println(cv[j]);
+    }   
+    Serial.println(""); 
+  }
+  if(stop) {
+    failureCount++;
+    if(failureCount < errLimit) { //einen 'Fehlversuch' ignorieren.
+       Serial.print("Error found, waiting until failureCount reaches ");
+       Serial.print(errLimit);
+       Serial.print("; now: ");
+       Serial.println(failureCount);
+    } else {
+       if(!battery.stopBattery) {
+           Serial.println("Error limit reached, stopping battery...");
+       }
+       battery.stopBattery = true;      
+       starteNetzvorrang("Interrupt(NZV); " + message);
+       digitalWrite(LED_GREEN, LOW);
+       digitalWrite(LED_RED, HIGH);
+       digitalWrite(LED_BLUE, LOW);
+    }
+  } else {  
+      if(failureCount >= errLimit) { 
+         failureCount = 0;
+         Serial.println("OK, resetting failureCount, enabling battery");
+      }
+      //Hier sollte nicht die Batterie gestartet, sondern nur freigeschaltet werden!!!
+      //starteBatterie("Interrupt(BAT); " + message);
+      battery.stopBattery = false;    
+      digitalWrite(LED_GREEN, HIGH);
+      digitalWrite(LED_RED, LOW);
+      digitalWrite(LED_BLUE, LOW);
+  }
+}
+
+/**
+ * Netzvorrang starten
+ */
+void starteNetzvorrang(String reason) {
+  String msg = "";
+    if(digitalRead(RELAY_PIN) == HIGH) {
+      digitalWrite(RELAY_PIN, LOW); //ON, d.h. Netzvorrang aktiv
+      sendClients("Toggle battery LOW", false);
+      msg += "Starte Netzvorrang ( ";
+      msg += timerCount;
+      msg += " ) :: ";
+      msg += reason;
+      msg += '\n';
+    } else {
+      if(debug)  msg = "Kann Netzvorrang nicht starten, da schon aktiv\n";
+    }
+    
+    if(debug) {
+      msg += "Clientcount: ";
+      msg += clientCount;
+      msg += '\n';
+    }
+    if(msg.length()>0) {
+      Serial.println(msg);
+      sendClients(msg, false);
+    }
+}
+
+/**
+ * Batteriebetrieb starten
+ */
+void starteBatterie(String reason) {
+  String msg = "";
+  if (!battery.stopBattery) {
+    if(digitalRead(RELAY_PIN) == LOW) {
+      digitalWrite(RELAY_PIN, HIGH); //OFF, d.h. Batterie aktiv
+      sendClients("Toggle battery HIGH", false);
+      msg += "Starte Netzvorrang ( ";
+      msg += timerCount;
+      msg += " ) :: ";
+      msg += reason;
+      msg += '\n';
+    } else {
+      return;
+    }
+  } else {
+     msg = "Kann Netzvorrang nicht stoppen, da Stopflag aktiv\n";
+  }   
+  if(debug) {
+      msg += "Clientcount: ";
+      msg += clientCount;
+      msg += '\n';
+  }
+  if(msg.length()>0) {
+      Serial.println(msg);
+      sendClients(msg, false);
+  }
+}
+
+/**
+ * Der Button wird über ein in der Setup-Funktion definierten
+ * Interrupt angebunden:
+ * 
+ * attachInterrupt(digitalPinToInterrupt(TASTER), handleButton, RISING);
+ */
+void handleButton() {
+  if(debug) Serial.println("Button pressed");
+
+  if((millis() - tasterZeit) > entprellZeit) { 
+
+      tasterZeit = millis();
+  
+      relayStatus = digitalRead(RELAY_PIN);
+      if(relayStatus == HIGH) {
+          // starte Netzvorrang
+           starteNetzvorrang("Buttonaction");
+      } else {
+          if(!battery.stopBattery) {
+            starteBatterie("Buttonaction");
+          } else {      
+            Serial.println("ON, kann Netzvorrang nicht abschalten (Stop wegen SOC oder Low Voltage)");
+          }          
+      }
+      
+  } 
+}
+
+/**********************************************************************/
+/*                                                                    */
+/*                 Setup                                              */
+/*                                                                    */
+/**********************************************************************/
+void setup() {
+  
+  Serial.begin(115200);  //USB
+  
+  //Serial1.begin(115200); //SBMS
+  mySerial.begin(9600); //SBMS
+  
+  delay(500);
+  Serial.println("Starting...");
+  
+  //lese SPIFFS config file system
+  config.init(battery);
+
+  //Pins fuer Taster und Relay initialisieren
+  pinMode(TASTER, INPUT);
+  pinMode(RELAY_PIN, OUTPUT);
+  
+  //Leds
+  pinMode(LED_RED, OUTPUT);
+  pinMode(LED_GREEN, OUTPUT);
+  pinMode(LED_BLUE, OUTPUT);
+  
+  //Beim Laden BLAU zeigen
+  digitalWrite(LED_RED, LOW);
+  digitalWrite(LED_GREEN, LOW);
+  digitalWrite(LED_BLUE, HIGH);
+
+  //Button-Handlermethode anbinden
+  attachInterrupt(digitalPinToInterrupt(TASTER), handleButton, RISING);
+
+  // etabliere Wifi Verbindung
+  myWifi.connect();
+
+  // start WebsocketServer server
+  wsServer.onEvent(webSocketEvent);
+  wsServer.begin();   
+
+  // start Webserver
+  server.on("/", [](){ server.send(200, "text/plain", "Hello World!"); });
+  server.on("/sbms", sbmsPage);
+  server.begin();
+
+  // start interrupt timer method
+  ticker.attach(3, isrHandler);
+
+  // initialize other the air updates
+  ota.init(server, host);
+}
+
+/**********************************************************************/
+/*                                                                    */
+/*                 Loop                                               */
+/*                                                                    */
+/**********************************************************************/
+void loop() {
+  yield();
+  wsServer.loop();
+  yield();
+  server.handleClient(); 
+  yield();
+  readSbms();
+}
+
+
+
+
+
+

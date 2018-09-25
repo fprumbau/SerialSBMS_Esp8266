@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CodeBlocks_project_file>
+	<FileVersion major="1" minor="6"/>
+	<Project>
+		<Option title="SerialSBMS_Esp8266"/>
+		<Option makefile_is_custom="1"/>
+		<Option compiler="gcc"/>
+		<Option virtualFolders="CMake Files\;"/>
+		<Build>
+			<Target title="all">
+				<Option working_dir="/home/fprumbau/Arduino/SerialSBMS_Esp8266/cmake-build-debug"/>
+				<Option type="4"/>
+				<MakeCommands>
+					<Build command="/usr/bin/gmake -j6 -f &quot;/home/fprumbau/Arduino/SerialSBMS_Esp8266/cmake-build-debug/Makefile&quot;  VERBOSE=1 all"/>
+					<CompileFile command="/usr/bin/gmake -j6 -f &quot;/home/fprumbau/Arduino/SerialSBMS_Esp8266/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/gmake -j6 -f &quot;/home/fprumbau/Arduino/SerialSBMS_Esp8266/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/gmake -j6 -f &quot;/home/fprumbau/Arduino/SerialSBMS_Esp8266/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="edit_cache">
+				<Option working_dir="/home/fprumbau/Arduino/SerialSBMS_Esp8266/cmake-build-debug"/>
+				<Option type="4"/>
+				<MakeCommands>
+					<Build command="/usr/bin/gmake -j6 -f &quot;/home/fprumbau/Arduino/SerialSBMS_Esp8266/cmake-build-debug/Makefile&quot;  VERBOSE=1 edit_cache"/>
+					<CompileFile command="/usr/bin/gmake -j6 -f &quot;/home/fprumbau/Arduino/SerialSBMS_Esp8266/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/gmake -j6 -f &quot;/home/fprumbau/Arduino/SerialSBMS_Esp8266/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/gmake -j6 -f &quot;/home/fprumbau/Arduino/SerialSBMS_Esp8266/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="rebuild_cache">
+				<Option working_dir="/home/fprumbau/Arduino/SerialSBMS_Esp8266/cmake-build-debug"/>
+				<Option type="4"/>
+				<MakeCommands>
+					<Build command="/usr/bin/gmake -j6 -f &quot;/home/fprumbau/Arduino/SerialSBMS_Esp8266/cmake-build-debug/Makefile&quot;  VERBOSE=1 rebuild_cache"/>
+					<CompileFile command="/usr/bin/gmake -j6 -f &quot;/home/fprumbau/Arduino/SerialSBMS_Esp8266/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/gmake -j6 -f &quot;/home/fprumbau/Arduino/SerialSBMS_Esp8266/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/gmake -j6 -f &quot;/home/fprumbau/Arduino/SerialSBMS_Esp8266/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="SerialSBMS_Esp8266">
+				<Option output="/home/fprumbau/Arduino/SerialSBMS_Esp8266/cmake-build-debug/SerialSBMS_Esp8266" prefix_auto="0" extension_auto="0"/>
+				<Option working_dir="/home/fprumbau/Arduino/SerialSBMS_Esp8266/cmake-build-debug"/>
+				<Option object_output="./"/>
+				<Option type="1"/>
+				<Option compiler="gcc"/>
+				<Compiler>
+					<Add directory="/home/fprumbau/Arduino/SerialSBMS_Esp8266/."/>
+					<Add directory="/usr/include/c++/8"/>
+					<Add directory="/usr/include/c++/8/x86_64-suse-linux"/>
+					<Add directory="/usr/include/c++/8/backward"/>
+					<Add directory="/usr/lib64/gcc/x86_64-suse-linux/8/include"/>
+					<Add directory="/usr/local/include"/>
+					<Add directory="/usr/lib64/gcc/x86_64-suse-linux/8/include-fixed"/>
+					<Add directory="/usr/lib64/gcc/x86_64-suse-linux/8/../../../../x86_64-suse-linux/include"/>
+					<Add directory="/usr/include"/>
+				</Compiler>
+				<MakeCommands>
+					<Build command="/usr/bin/gmake -j6 -f &quot;/home/fprumbau/Arduino/SerialSBMS_Esp8266/cmake-build-debug/Makefile&quot;  VERBOSE=1 SerialSBMS_Esp8266"/>
+					<CompileFile command="/usr/bin/gmake -j6 -f &quot;/home/fprumbau/Arduino/SerialSBMS_Esp8266/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/gmake -j6 -f &quot;/home/fprumbau/Arduino/SerialSBMS_Esp8266/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/gmake -j6 -f &quot;/home/fprumbau/Arduino/SerialSBMS_Esp8266/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="SerialSBMS_Esp8266/fast">
+				<Option output="/home/fprumbau/Arduino/SerialSBMS_Esp8266/cmake-build-debug/SerialSBMS_Esp8266" prefix_auto="0" extension_auto="0"/>
+				<Option working_dir="/home/fprumbau/Arduino/SerialSBMS_Esp8266/cmake-build-debug"/>
+				<Option object_output="./"/>
+				<Option type="1"/>
+				<Option compiler="gcc"/>
+				<Compiler>
+					<Add directory="/home/fprumbau/Arduino/SerialSBMS_Esp8266/."/>
+					<Add directory="/usr/include/c++/8"/>
+					<Add directory="/usr/include/c++/8/x86_64-suse-linux"/>
+					<Add directory="/usr/include/c++/8/backward"/>
+					<Add directory="/usr/lib64/gcc/x86_64-suse-linux/8/include"/>
+					<Add directory="/usr/local/include"/>
+					<Add directory="/usr/lib64/gcc/x86_64-suse-linux/8/include-fixed"/>
+					<Add directory="/usr/lib64/gcc/x86_64-suse-linux/8/../../../../x86_64-suse-linux/include"/>
+					<Add directory="/usr/include"/>
+				</Compiler>
+				<MakeCommands>
+					<Build command="/usr/bin/gmake -j6 -f &quot;/home/fprumbau/Arduino/SerialSBMS_Esp8266/cmake-build-debug/Makefile&quot;  VERBOSE=1 SerialSBMS_Esp8266/fast"/>
+					<CompileFile command="/usr/bin/gmake -j6 -f &quot;/home/fprumbau/Arduino/SerialSBMS_Esp8266/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/gmake -j6 -f &quot;/home/fprumbau/Arduino/SerialSBMS_Esp8266/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/gmake -j6 -f &quot;/home/fprumbau/Arduino/SerialSBMS_Esp8266/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+		</Build>
+		<Unit filename="/home/fprumbau/Arduino/SerialSBMS_Esp8266/Battery.cpp">
+			<Option target="SerialSBMS_Esp8266"/>
+		</Unit>
+		<Unit filename="/home/fprumbau/Arduino/SerialSBMS_Esp8266/Battery.h">
+			<Option target="SerialSBMS_Esp8266"/>
+		</Unit>
+		<Unit filename="/home/fprumbau/Arduino/SerialSBMS_Esp8266/MyWifi.cpp">
+			<Option target="SerialSBMS_Esp8266"/>
+		</Unit>
+		<Unit filename="/home/fprumbau/Arduino/SerialSBMS_Esp8266/MyWifi.h">
+			<Option target="SerialSBMS_Esp8266"/>
+		</Unit>
+		<Unit filename="/home/fprumbau/Arduino/SerialSBMS_Esp8266/OTA.cpp">
+			<Option target="SerialSBMS_Esp8266"/>
+		</Unit>
+		<Unit filename="/home/fprumbau/Arduino/SerialSBMS_Esp8266/OTA.h">
+			<Option target="SerialSBMS_Esp8266"/>
+		</Unit>
+		<Unit filename="/home/fprumbau/Arduino/SerialSBMS_Esp8266/Relay.h">
+			<Option target="SerialSBMS_Esp8266"/>
+		</Unit>
+		<Unit filename="/home/fprumbau/Arduino/SerialSBMS_Esp8266/SBMS.cpp">
+			<Option target="SerialSBMS_Esp8266"/>
+		</Unit>
+		<Unit filename="/home/fprumbau/Arduino/SerialSBMS_Esp8266/SBMS.h">
+			<Option target="SerialSBMS_Esp8266"/>
+		</Unit>
+		<Unit filename="/home/fprumbau/Arduino/SerialSBMS_Esp8266/Taster.h">
+			<Option target="SerialSBMS_Esp8266"/>
+		</Unit>
+		<Unit filename="/home/fprumbau/Arduino/SerialSBMS_Esp8266/config.cpp">
+			<Option target="SerialSBMS_Esp8266"/>
+		</Unit>
+		<Unit filename="/home/fprumbau/Arduino/SerialSBMS_Esp8266/config.h">
+			<Option target="SerialSBMS_Esp8266"/>
+		</Unit>
+		<Unit filename="/home/fprumbau/Arduino/SerialSBMS_Esp8266/webpage.h">
+			<Option target="SerialSBMS_Esp8266"/>
+		</Unit>
+		<Unit filename="/home/fprumbau/Arduino/SerialSBMS_Esp8266/CMakeLists.txt">
+			<Option virtualFolder="CMake Files\"/>
+		</Unit>
+	</Project>
+</CodeBlocks_project_file>

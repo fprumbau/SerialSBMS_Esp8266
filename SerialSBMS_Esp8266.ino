@@ -402,7 +402,6 @@ void isrHandler(void)  {
   } else {  
       if(failureCount >= errLimit) { 
          failureCount = 0;
-         Serial.println("OK, resetting failureCount, enabling battery");
       }
       //Hier sollte nicht die Batterie gestartet, sondern nur freigeschaltet werden!!!
       //starteBatterie("Interrupt(BAT); " + message);
@@ -562,7 +561,7 @@ void setup() {
   server.begin();
 
   // start interrupt timer method
-  ticker.attach(3, isrHandler);
+  ticker.attach(4, isrHandler);
 
   // initialize other the air updates
   ota.init(server, host);
@@ -580,4 +579,11 @@ void loop() {
   server.handleClient(); 
   yield();
   readSbms();
+  if(debug) {
+    String mem = "";
+    mem += "Heap (free): " + ESP.getFreeHeap();
+    //mem += " / Heapfragm.: " + ESP.getHeapFragmentation();
+    //mem += " / MaxFreeBs: " + ESP.getMaxFreeBlockSize();
+    sendClients(mem, false);
+  }
 }

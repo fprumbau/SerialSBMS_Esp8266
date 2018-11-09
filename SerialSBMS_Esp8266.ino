@@ -69,7 +69,13 @@ SoftwareSerial mySerial(13, 15, false, 256);
 void sbmsPage() {
   long s1 = sizeof(part1);
   long s2 = sizeof(part2);
-  long totalSize = s1 + s2;
+
+  String connStr = "var connection = new WebSocket('ws://";
+  connStr+=myWifi.getIpAddress();
+  connStr+=":81/', ['arduino']);";
+  int s3 = connStr.length();
+  
+  long totalSize = s1 + s2 + s3;
   if(debug) {
     Serial.print("\np1: ");
     Serial.println(s1);
@@ -81,6 +87,7 @@ void sbmsPage() {
   }
   server.setContentLength(totalSize);
   server.send_P(200, "text/html", part1);
+  server.sendContent(connStr);
   server.sendContent_P(part2);
 }
 
@@ -195,7 +202,7 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length
 }
 
 //nicht auf Serial1 warten, Feste Werte annehmen
-bool testFixed = true;
+bool testFixed = false;
 
 void readSbms() {
 
@@ -224,7 +231,9 @@ void readSbms() {
    * und damit der Netzvorrang aktiv.
    */
   if(sread.length() > 1 || ( millis() - lastReceivedMillis ) > timeout ) {
-      if(( millis() - lastReceivedMillis ) > 3000) { //Verarbeitung hoechstens alle 3 Sekunde
+      if(( millis() - lastReceivedMillis ) > 3000) { //Verarbeitung hoechstens alle 3 Sekunden
+          Serial.print("Empfang: ");
+          Serial.println(sread);
           evaluate(sread);
       }
   }
@@ -560,9 +569,3 @@ void loop() {
   yield();
   readSbms();
 }
-
-
-
-
-
-

@@ -224,7 +224,7 @@ void readSbms() {
    * Solange etwas empfangen wird (sread gefuellt) sollte ausgewertet werden.
    * Wenn aber der Timeout zuschlaegt, dann fuehrt das Lesen der nicht empfangenen
    * Werte, dazu, soc und cv[] zurueckzusetzen, woraufhin der naechste Lauf der
-   * Interruptmethode ISR(TIMER1_COMPA_vect) dazu, dass die Status-LED auf rot schaltet.
+   * Interruptmethode isrHandler(..) dazu, dass die Status-LED auf rot schaltet.
    * Gleichzeitig ist es nicht mehr möglich, auf Batterie zu wechseln.
    * 
    * Ist die Batterie gerade aktiv, wird das Relais wieder zurückgeschaltet (normal connected) 
@@ -397,9 +397,7 @@ void isrHandler(void)  {
        }
        battery.stopBattery = true;      
        starteNetzvorrang("Interrupt(NZV); " + message);
-       digitalWrite(LED_GREEN, LOW);
-       digitalWrite(LED_RED, HIGH);
-       digitalWrite(LED_BLUE, LOW);
+       setRed();
     }
   } else {  
       if(failureCount >= errLimit) { 
@@ -409,10 +407,26 @@ void isrHandler(void)  {
       //Hier sollte nicht die Batterie gestartet, sondern nur freigeschaltet werden!!!
       //starteBatterie("Interrupt(BAT); " + message);
       battery.stopBattery = false;    
-      digitalWrite(LED_GREEN, HIGH);
-      digitalWrite(LED_RED, LOW);
-      digitalWrite(LED_BLUE, LOW);
+      setGreen();
   }
+}
+
+void setBlue() {
+  digitalWrite(LED_GREEN, LOW);
+  digitalWrite(LED_RED, LOW);
+  digitalWrite(LED_BLUE, HIGH);
+}
+
+void setGreen() {
+  digitalWrite(LED_GREEN, HIGH);
+  digitalWrite(LED_RED, LOW);
+  digitalWrite(LED_BLUE, LOW);
+}
+
+void setRed() {
+  digitalWrite(LED_GREEN, LOW);
+  digitalWrite(LED_RED, HIGH);
+  digitalWrite(LED_BLUE, LOW);
 }
 
 /**
@@ -530,9 +544,7 @@ void setup() {
   pinMode(LED_BLUE, OUTPUT);
   
   //Beim Laden BLAU zeigen
-  digitalWrite(LED_RED, LOW);
-  digitalWrite(LED_GREEN, LOW);
-  digitalWrite(LED_BLUE, HIGH);
+  setBlue();
 
   //Button-Handlermethode anbinden
   attachInterrupt(digitalPinToInterrupt(TASTER), handleButton, RISING);

@@ -46,7 +46,7 @@ long timerCount=0;
 //findet die Interruptmethode falsche Werte vor, so wird noch einmal
 //(4s) gewartet, bevor diese tatsächlich zu einem Fehler führen.
 int failureCount = 0;
-const int errLimit = 3;
+const int errLimit = 5;
 
 unsigned long wsServerLastSend = -1;
 
@@ -419,7 +419,7 @@ void isrHandler(void)  {
  * Netzvorrang starten
  */
 void starteNetzvorrang(String reason) {
-  String msg = "";
+    String msg = "";
     if(digitalRead(RELAY_PIN) == HIGH) {
       digitalWrite(RELAY_PIN, LOW); //ON, d.h. Netzvorrang aktiv
       sendClients("Toggle battery LOW", false);

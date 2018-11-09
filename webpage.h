@@ -1,5 +1,5 @@
 
-
+ee
 const char part1[] PROGMEM = R"=====(
 <!DOCTYPE html>
 <html>
@@ -97,8 +97,12 @@ localStorage['model']=s1[2];
 
 console.log('Trying to open Webclient socket');
 log('Trying to open Webclient socket');
+)=====";
 
-var connection = new WebSocket('ws://'+location.hostname+':81/', ['arduino']);
+//---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+const char part2[] PROGMEM = R"=====(
+//var connection = new WebSocket('ws://'+location.hostname+':81/', ['arduino']);  wird nun vorher im Hauptprogramm eingeschoben
+
 connection.onopen = function () { connection.send('Connect ' + new Date()); };
 connection.onerror = function (error) { 
   console.log('wsServer Error ', error);
@@ -149,10 +153,7 @@ connection.onmessage = function (e) {
 };
 console.log('End trying to open Webclient socket');
 log('End trying to open webclient socket');
-)=====";
 
-//---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-const char part2[] PROGMEM = R"=====(
 //Keine State-Information hier, die Bestätigung kommt mit Websocket-Datagramm
 function toggleBattery(txt) {
     if(txt == 'Netzvorrang') {
@@ -238,6 +239,8 @@ function all(){
     } 
     for (i=2;i<5;i++){htm('d'+i,w[i-2]);}
     for (x1=0;x1<7;x1++) {
+      col = sbms1[x1+1];
+      if(col == 'Load') continue; //Load nicht mehr benoetigt
       var n2=w[8]=w[9]=w[10]=w[11]='';
       var cv=dcmp((x1*3)+29,3,sbms)/1000;
       var enW=dcmp(x1*6,6,eW);
@@ -255,7 +258,7 @@ function all(){
       if (x1==5){cv=dcmp(0,3,xsbms)/1000;}
       if (x1==6){cv=sv;}  
       if(x1!=3){
-      w[3] +=sbms1[x1+1]+r ;
+      w[3] +=col+r ;
       w[4] +=w[8]+n2+cv.toFixed(3)+r;
       w[5] +=w[9]+n2+(cv*bv).toFixed(1)+r;
       w[6] +=w[10]+fN(enA)+r;

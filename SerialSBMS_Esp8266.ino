@@ -103,13 +103,13 @@ void sendClients(String msg, bool data) {
   if(clientCount<=0) {
     return;
   }
-  if(wsServerLastSend>0 && (millis()-wsServerLastSend) < 100) {
+  /*if(wsServerLastSend>0 && (millis()-wsServerLastSend) < 100) {
     if(debug) {
       Serial.print("Could not send data multiple times in 100ms; disgarding ");
       Serial.println(data); 
     }
     return;
-  }
+  }*/
   wsServerLastSend = millis();
   for(int m=0; m<clientCount; m++) {
      uint8_t client = clients[m];
@@ -231,8 +231,7 @@ void readSbms() {
    * und damit der Netzvorrang aktiv.
    */
   if(sread.length() > 1 || ( millis() - lastReceivedMillis ) > timeout ) {
-      if(( millis() - lastReceivedMillis ) > 3000) { //Verarbeitung hoechstens alle 3 Sekunden
-          Serial.print("Empfang: ");
+      if(( millis() - lastReceivedMillis ) > 3000 && sread.length() > 0) { //Verarbeitung hoechstens alle 3 Sekunden
           Serial.println(sread);
           evaluate(sread);
       }
@@ -252,7 +251,7 @@ void toggleDebug(unsigned char* payload) {
   if(payload[2]=='1') {
     //debug
     dbgVar=&debug;
-    msg+="Switched debug to ";
+    msg+="Switched debug1 to ";
   } else {
     //debug2
      dbgVar=&debug2;
@@ -321,6 +320,11 @@ void evaluate(String& sread) {
       Serial.println("_______________________________________");
     }
 
+    if(!debug2) {
+      String mem = " Heap (free): ";
+      mem += ESP.getFreeHeap();
+      sendClients(mem , false);
+    } 
    
     //Timeoutcounter nur zuruecksetzen, wenn etwas empfangen wurde
     if(sread.length() > 1) {
@@ -556,7 +560,6 @@ void setup() {
   wsServer.begin();   
 
   // start Webserver
-  server.on("/", [](){ server.send(200, "text/plain", "Hello World!"); });
   server.on("/sbms", sbmsPage);
   server.begin();
 
@@ -579,11 +582,4 @@ void loop() {
   server.handleClient(); 
   yield();
   readSbms();
-  if(debug) {
-    String mem = "";
-    mem += "Heap (free): " + ESP.getFreeHeap();
-    //mem += " / Heapfragm.: " + ESP.getHeapFragmentation();
-    //mem += " / MaxFreeBs: " + ESP.getMaxFreeBlockSize();
-    sendClients(mem, false);
-  }
 }

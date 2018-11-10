@@ -44,7 +44,7 @@ button{color:#b50;background:#D8BFD8;border:2px solid white;width:120px;height:2
 <canvas id='Lg' width='70' height='120' style='position:relative; top:11px; left:12px; z-index:2; float: left;'></canvas>
 <div2 style='top:12px; left:360px; color:#d92;text-shadow:-1px -2px 1px #fd4,1px 2px 2px #fea;font-size:40px;' id='id'></div2>
 <div2 style='width:350px; top:82px; left:90px; color:#be5;float:none;'><div >www.ElectroDacus.com</div>
-<div style='color:transparent; -webkit-transform: rotateX(180deg);transform: rotateX(180deg);-ms-transform:rotateX(180deg); text-shadow: 0px 0px 1px #371;'>www.ElectroDacus.com</div></div2>
+<div style='color:transparent; -webkit-transform: rotateX(180deg);transform: rotateX(180deg);-ms-transform:rotateX(180deg); text-shadow: 0px 0px 1px #371;' onClick="document.location.href='/update'">www.ElectroDacus.com</div></div2>
 <div2 id="demo"></div2>
 <div2 style='width:350px; top:82px; left:520px;'>
 <button id="bb" onclick="toggleBattery(this.innerHTML);">Netzvorrang</button>

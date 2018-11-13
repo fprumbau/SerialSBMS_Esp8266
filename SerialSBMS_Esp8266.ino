@@ -120,90 +120,6 @@ void sendClients(String msg, bool data) {
   }
 }
 
-/**
- * Websocket-Events, wenn neue Clients sich verbinden, wenn die clients
- * selbst senden oder wenn sie geschlossen werden.
- */
-void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length) {
-
-    switch(type) {
-        case WStype_DISCONNECTED: {
-            //Client 'num' aus Liste rausnehmen
-            uint8_t newClients[256];
-            for(int a=0; a<256; a++) {
-              newClients[a] = clients[a];
-            }
-            int c=0;
-            for(int x=0; x < clientCount; x++) {
-              if(num != newClients[x]) {
-                clients[c] = newClients[x];
-                c++;
-              } else {
-                clientCount--;
-              }
-            }
-            if(clientCount == 0) {
-              notifiedNoClient = false;
-              ready = false;
-            }
-            if(debug) {
-              Serial.printf("[%u] Disconnected! Remaining %u\n", num, clientCount);
-            }
-            break; }
-        case WStype_CONNECTED: {
-            IPAddress ip = wsServer.remoteIP(num);
-            Serial.println("");            
-
-            // send message to client
-            wsServer.sendTXT(num, "@ Connected");
-
-            bool alreadyListed = false;
-            int y = 0;
-            for(; y < clientCount; y++) {
-              if(num == clients[y]) {
-                alreadyListed = true;
-                break;
-              }
-            }
-            if(!alreadyListed) {
-              clients[y]=num;
-              clientCount++;
-            }
-            if(debug) {
-              Serial.printf("[%u] Connected from %d.%d.%d.%d url: %s; ConnCount: %u\n", num, ip[0], ip[1], ip[2], ip[3], payload, clientCount);
-            }
-            ready = true;
-
-            //Relaistatus uebermitteln
-            relayStatus = digitalRead(RELAY_PIN);
-            String msg = "Batteriestatus: "; //wird die Message von @ eingeleitet, wird sie nicht als SBMS-Datum interpretiert!
-            if(relayStatus == 0) {
-                msg += "LOW";
-            } else {
-                msg += "HIGH";
-            }
-            sendClients(msg, false);
-   
-            break; }
-        case WStype_TEXT:
-            if(debug) {
-              Serial.printf("[Client %u] received: %s\n", num, payload);
-            }
-
-            if(payload[0] == '@') {
-              if(payload[1] == '+') {
-                 starteBatterie("Websockets");                
-              } else if(payload[1] == '-') {
-                 starteNetzvorrang("Websockets");                
-              }           
-              if(payload[1] == 'd') {                
-                 toggleDebug(payload);
-              }              
-            }
-            break;
-    }
-}
-
 //nicht auf Serial1 warten, Feste Werte annehmen
 bool testFixed = false;
 
@@ -340,6 +256,166 @@ void evaluate(String& sread) {
     } 
 }
 
+void ICACHE_RAM_ATTR setBlue() {
+  digitalWrite(LED_GREEN, LOW);
+  digitalWrite(LED_RED, LOW);
+  digitalWrite(LED_BLUE, HIGH);
+}
+
+void ICACHE_RAM_ATTR setGreen() {
+  digitalWrite(LED_GREEN, HIGH);
+  digitalWrite(LED_RED, LOW);
+  digitalWrite(LED_BLUE, LOW);
+}
+
+void ICACHE_RAM_ATTR setRed() {
+  digitalWrite(LED_GREEN, LOW);
+  digitalWrite(LED_RED, HIGH);
+  digitalWrite(LED_BLUE, LOW);
+}
+
+/**
+ * Netzvorrang starten
+ */
+void ICACHE_RAM_ATTR starteNetzvorrang(String reason) {
+    String msg = "";
+    if(digitalRead(RELAY_PIN) == HIGH) {
+      digitalWrite(RELAY_PIN, LOW); //ON, d.h. Netzvorrang aktiv
+      sendClients("Toggle battery LOW", false);
+      msg += "Starte Netzvorrang :: ";
+      msg += reason;
+      msg += '\n';
+    } else {
+      if(debug)  msg = "Kann Netzvorrang nicht starten, da schon aktiv\n";
+    }    
+    if(debug) {
+      msg += "Clientcount: ";
+      msg += clientCount;
+      msg += '\n';
+    }
+    if(msg.length()>0) {
+      if(debug) {
+        Serial.println(msg);
+      }
+      sendClients(msg, false);
+    }
+}
+
+/**
+ * Batteriebetrieb starten
+ */
+void ICACHE_RAM_ATTR starteBatterie(String reason) {
+  String msg = "";
+  if (!battery.stopBattery) {
+    if(digitalRead(RELAY_PIN) == LOW) {
+      digitalWrite(RELAY_PIN, HIGH); //OFF, d.h. Batterie aktiv
+      sendClients("Toggle battery HIGH", false);
+      msg += "Starte Netzvorrang :: ";
+      msg += reason;
+      msg += '\n';
+    } else {
+      return;
+    }
+  } else {
+     msg = "Kann Netzvorrang nicht stoppen, da Stopflag aktiv\n";
+  }   
+  if(debug) {
+      msg += "Clientcount: ";
+      msg += clientCount;
+      msg += '\n';
+  }
+  if(msg.length()>0) {
+      if(debug) {
+        Serial.println(msg);
+      }
+      sendClients(msg, false);
+  }
+}
+
+/**
+ * Websocket-Events, wenn neue Clients sich verbinden, wenn die clients
+ * selbst senden oder wenn sie geschlossen werden.
+ */
+void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length) {
+
+    switch(type) {
+        case WStype_DISCONNECTED: {
+            //Client 'num' aus Liste rausnehmen
+            uint8_t newClients[256];
+            for(int a=0; a<256; a++) {
+              newClients[a] = clients[a];
+            }
+            int c=0;
+            for(int x=0; x < clientCount; x++) {
+              if(num != newClients[x]) {
+                clients[c] = newClients[x];
+                c++;
+              } else {
+                clientCount--;
+              }
+            }
+            if(clientCount == 0) {
+              notifiedNoClient = false;
+              ready = false;
+            }
+            if(debug) {
+              Serial.printf("[%u] Disconnected! Remaining %u\n", num, clientCount);
+            }
+            break; }
+        case WStype_CONNECTED: {
+            IPAddress ip = wsServer.remoteIP(num);
+            Serial.println("");            
+
+            // send message to client
+            wsServer.sendTXT(num, "@ Connected");
+
+            bool alreadyListed = false;
+            int y = 0;
+            for(; y < clientCount; y++) {
+              if(num == clients[y]) {
+                alreadyListed = true;
+                break;
+              }
+            }
+            if(!alreadyListed) {
+              clients[y]=num;
+              clientCount++;
+            }
+            if(debug) {
+              Serial.printf("[%u] Connected from %d.%d.%d.%d url: %s; ConnCount: %u\n", num, ip[0], ip[1], ip[2], ip[3], payload, clientCount);
+            }
+            ready = true;
+
+            //Relaistatus uebermitteln
+            relayStatus = digitalRead(RELAY_PIN);
+            String msg = "Batteriestatus: "; //wird die Message von @ eingeleitet, wird sie nicht als SBMS-Datum interpretiert!
+            if(relayStatus == 0) {
+                msg += "LOW";
+            } else {
+                msg += "HIGH";
+            }
+            sendClients(msg, false);
+   
+            break; }
+        case WStype_TEXT:
+            if(debug) {
+              Serial.printf("[Client %u] received: %s\n", num, payload);
+            }
+
+            if(payload[0] == '@') {
+              if(payload[1] == '+') {
+                 starteBatterie("Websockets");                
+              } else if(payload[1] == '-') {
+                 starteNetzvorrang("Websockets");                
+              }           
+              if(payload[1] == 'd') {                
+                 toggleDebug(payload);
+              }              
+            }
+            break;
+    }
+}
+
 /*
  * Interrupthandler, der in einem in der setup-Funktion definierten
  * Zeitinterval aufgerufen wird.
@@ -421,84 +497,6 @@ void ICACHE_RAM_ATTR isrHandler(void)  {
       //starteBatterie("Interrupt(BAT); " + message);
       battery.stopBattery = false;    
       setGreen();
-  }
-}
-
-void setBlue() {
-  digitalWrite(LED_GREEN, LOW);
-  digitalWrite(LED_RED, LOW);
-  digitalWrite(LED_BLUE, HIGH);
-}
-
-void setGreen() {
-  digitalWrite(LED_GREEN, HIGH);
-  digitalWrite(LED_RED, LOW);
-  digitalWrite(LED_BLUE, LOW);
-}
-
-void setRed() {
-  digitalWrite(LED_GREEN, LOW);
-  digitalWrite(LED_RED, HIGH);
-  digitalWrite(LED_BLUE, LOW);
-}
-
-/**
- * Netzvorrang starten
- */
-void starteNetzvorrang(String reason) {
-    String msg = "";
-    if(digitalRead(RELAY_PIN) == HIGH) {
-      digitalWrite(RELAY_PIN, LOW); //ON, d.h. Netzvorrang aktiv
-      sendClients("Toggle battery LOW", false);
-      msg += "Starte Netzvorrang :: ";
-      msg += reason;
-      msg += '\n';
-    } else {
-      if(debug)  msg = "Kann Netzvorrang nicht starten, da schon aktiv\n";
-    }    
-    if(debug) {
-      msg += "Clientcount: ";
-      msg += clientCount;
-      msg += '\n';
-    }
-    if(msg.length()>0) {
-      if(debug) {
-        Serial.println(msg);
-      }
-      sendClients(msg, false);
-    }
-}
-
-/**
- * Batteriebetrieb starten
- */
-void starteBatterie(String reason) {
-  String msg = "";
-  if (!battery.stopBattery) {
-    if(digitalRead(RELAY_PIN) == LOW) {
-      digitalWrite(RELAY_PIN, HIGH); //OFF, d.h. Batterie aktiv
-      sendClients("Toggle battery HIGH", false);
-      msg += "Starte Netzvorrang ( ";
-      msg += timerCount;
-      msg += " ) :: ";
-      msg += reason;
-      msg += '\n';
-    } else {
-      return;
-    }
-  } else {
-     msg = "Kann Netzvorrang nicht stoppen, da Stopflag aktiv\n";
-  }   
-  if(debug) {
-      msg += "Clientcount: ";
-      msg += clientCount;
-      msg += '\n';
-  }
-  if(msg.length()>0) {
-      if(debug) {
-        Serial.println(msg);
-      }
-      sendClients(msg, false);
   }
 }
 

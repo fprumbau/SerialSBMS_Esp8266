@@ -21,8 +21,6 @@ Battery battery;
 ESP8266WebServer server(80);
 WebSocketsServer wsServer = WebSocketsServer(81);
 
-const char* host = "esp8266B";
-
 //client connected to send?
 volatile bool ready = false;
 
@@ -32,7 +30,6 @@ bool notifiedNoClient = false;
 
 Ticker ticker;
 int counter = 0;
-const char* data;
 
 bool debug = false;
 bool debug2 = false;
@@ -42,10 +39,10 @@ int cv[8]; //aktuelle Zellspannungen
 //Empfangstimeout ( wird 10s nichts empfangen, muss die Batterie abgeschaltet werden )
 long timeout = 10000; 
 unsigned long lastReceivedMillis = -1;
-long timerCount=0;
+
 //findet die Interruptmethode falsche Werte vor, so wird noch einmal
 //(4s) gewartet, bevor diese tatsächlich zu einem Fehler führen.
-int failureCount = 0;
+volatile int failureCount = 0;
 const int errLimit = 5;
 
 unsigned long wsServerLastSend = -1;
@@ -149,7 +146,9 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length
               notifiedNoClient = false;
               ready = false;
             }
-            Serial.printf("[%u] Disconnected! Remaining %u\n", num, clientCount);
+            if(debug) {
+              Serial.printf("[%u] Disconnected! Remaining %u\n", num, clientCount);
+            }
             break; }
         case WStype_CONNECTED: {
             IPAddress ip = wsServer.remoteIP(num);
@@ -170,7 +169,9 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length
               clients[y]=num;
               clientCount++;
             }
-            Serial.printf("[%u] Connected from %d.%d.%d.%d url: %s; ConnCount: %u\n", num, ip[0], ip[1], ip[2], ip[3], payload, clientCount);
+            if(debug) {
+              Serial.printf("[%u] Connected from %d.%d.%d.%d url: %s; ConnCount: %u\n", num, ip[0], ip[1], ip[2], ip[3], payload, clientCount);
+            }
             ready = true;
 
             //Relaistatus uebermitteln
@@ -185,7 +186,9 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length
    
             break; }
         case WStype_TEXT:
-            Serial.printf("[Client %u] received: %s\n", num, payload);
+            if(debug) {
+              Serial.printf("[Client %u] received: %s\n", num, payload);
+            }
 
             if(payload[0] == '@') {
               if(payload[1] == '+') {
@@ -232,7 +235,9 @@ void readSbms() {
    */
   if(sread.length() > 1 || ( millis() - lastReceivedMillis ) > timeout ) {
       if(( millis() - lastReceivedMillis ) > 3000 && sread.length() > 0) { //Verarbeitung hoechstens alle 3 Sekunden
-          Serial.println(sread);
+          if(debug) {
+            Serial.println(sread);
+          }
           evaluate(sread);
       }
   }
@@ -264,7 +269,9 @@ void toggleDebug(unsigned char* payload) {
     dbgVar = false;
     msg+=false;
   }
-  Serial.println(msg);
+  if(debug) {
+    Serial.println(msg);
+  }
   sendClients(msg, false);
 }
 
@@ -287,13 +294,14 @@ void evaluate(String& sread) {
     } else {
         if(!notifiedNoClient) {
           notifiedNoClient = true;
-          Serial.println("no client connected, yet");
+          if(debug) {
+            Serial.println("no client connected, yet");
+          }
         }
     }
     
     int len = sread.length();
-    char txt[len];
-    sread.toCharArray(txt, len);
+    const char* txt = sread.c_str();
 
     String outString = "\nSOC: ";
     soc = sbms.dcmp(6, 2, txt, len);    
@@ -320,7 +328,7 @@ void evaluate(String& sread) {
       Serial.println("_______________________________________");
     }
 
-    if(!debug2) {
+    if(debug2) {
       String mem = " Heap (free): ";
       mem += ESP.getFreeHeap();
       sendClients(mem , false);
@@ -346,14 +354,12 @@ void evaluate(String& sread) {
  * 
  * Aktuell 
  */
-void isrHandler(void)  {
+void ICACHE_RAM_ATTR isrHandler(void)  {
   if(soc < 0) return; //die Main-Loop sollte erstmal Werte lesen 
 
   /*if(testFixed) {
     return; //keine Auswertung, wenn Testwerte
   }*/
-
-  timerCount++;
 
   boolean stop = false;
   String message = "";
@@ -391,13 +397,17 @@ void isrHandler(void)  {
   if(stop) {
     failureCount++;
     if(failureCount < errLimit) { //einen 'Fehlversuch' ignorieren.
-       Serial.print("Error found, waiting until failureCount reaches ");
-       Serial.print(errLimit);
-       Serial.print("; now: ");
-       Serial.println(failureCount);
+       if(debug) {
+         Serial.print("Error found, waiting until failureCount reaches ");
+         Serial.print(errLimit);
+         Serial.print("; now: ");
+         Serial.println(failureCount);
+       }
     } else {
        if(!battery.stopBattery) {
-           Serial.println("Error limit reached, stopping battery...");
+           if(debug) {
+              Serial.println("Error limit reached, stopping battery...");
+           }
        }
        battery.stopBattery = true;      
        starteNetzvorrang("Interrupt(NZV); " + message);
@@ -440,22 +450,21 @@ void starteNetzvorrang(String reason) {
     if(digitalRead(RELAY_PIN) == HIGH) {
       digitalWrite(RELAY_PIN, LOW); //ON, d.h. Netzvorrang aktiv
       sendClients("Toggle battery LOW", false);
-      msg += "Starte Netzvorrang ( ";
-      msg += timerCount;
-      msg += " ) :: ";
+      msg += "Starte Netzvorrang :: ";
       msg += reason;
       msg += '\n';
     } else {
       if(debug)  msg = "Kann Netzvorrang nicht starten, da schon aktiv\n";
-    }
-    
+    }    
     if(debug) {
       msg += "Clientcount: ";
       msg += clientCount;
       msg += '\n';
     }
     if(msg.length()>0) {
-      Serial.println(msg);
+      if(debug) {
+        Serial.println(msg);
+      }
       sendClients(msg, false);
     }
 }
@@ -486,7 +495,9 @@ void starteBatterie(String reason) {
       msg += '\n';
   }
   if(msg.length()>0) {
-      Serial.println(msg);
+      if(debug) {
+        Serial.println(msg);
+      }
       sendClients(msg, false);
   }
 }
@@ -512,7 +523,9 @@ void handleButton() {
           if(!battery.stopBattery) {
             starteBatterie("Buttonaction");
           } else {      
-            Serial.println("ON, kann Netzvorrang nicht abschalten (Stop wegen SOC oder Low Voltage)");
+            if(debug) {
+              Serial.println("ON, kann Netzvorrang nicht abschalten (Stop wegen SOC oder Low Voltage)");
+            }
           }          
       }
       
@@ -560,6 +573,7 @@ void setup() {
   wsServer.begin();   
 
   // start Webserver
+  server.on("/", sbmsPage);
   server.on("/sbms", sbmsPage);
   server.begin();
 
@@ -567,7 +581,7 @@ void setup() {
   ticker.attach(4, isrHandler);
 
   // initialize other the air updates
-  ota.init(server, host);
+  ota.init(server, "esp8266B");
 }
 
 /**********************************************************************/

@@ -12,18 +12,9 @@ const unsigned char dec[91] = {
   'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', '{', '|', '}'
 };
 
-unsigned int SBMS::char_off(char c) {
-  unsigned int rv = 0;
-  for(int i = 0; i < 91; i++) {
-      if(dec[i] == c) {
-        rv = i;
-        break;
-      }
-    
-  }
-  return rv;
-}
-
+/**
+ * Dekodierung der vom SBMS120 kommenden Werte
+ */
 long SBMS::dcmp(int loc, int size,  const char* sbms, int sbmsLen) {
   long rv = 0;
   if(loc > sbmsLen) {
@@ -39,3 +30,14 @@ long SBMS::dcmp(int loc, int size,  const char* sbms, int sbmsLen) {
   return rv;
 }
 
+unsigned int SBMS::char_off(char c) {
+  unsigned int rv = 0;
+  for(int i = 0; i < 91; i++) {
+      if(dec[i] == c) {
+        rv = i;
+        break;
+      }
+    
+  }
+  return rv;
+}

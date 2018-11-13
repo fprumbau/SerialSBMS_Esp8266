@@ -10,7 +10,7 @@ void OTA::init(ESP8266WebServer& server, const char* host) {
      MDNS.begin(host);
      MDNS.addService("http", "tcp", 80);
      Serial.printf("\n\nHTTPUpdateServer ready! Open http://%s.local/update in your browser\n", host);
-     _otaUpdater.setUpdaterUi("Title", "Banner", "Build : 0.7.13", "Branch : master","Device info : ukn","Last: Verarbeitung nur aufrufen, wenn Input vorhanden");
+     _otaUpdater.setUpdaterUi("Title", "Banner", "Build : 0.7.15", "Branch : master","Device info : ukn","Last: Verarbeitung nur aufrufen, wenn Input vorhanden; Flag zum isrHandler hinzu, damit Funktion im Cache verbleibt");
      _otaUpdater.setup(&server);
   } else {
      Serial.println("Flash OTA programming only possible with 4Mb Flash size!!!");

@@ -10,8 +10,8 @@ void OTA::init(ESP8266WebServer& server, const char* host) {
      MDNS.begin(host);
      MDNS.addService("http", "tcp", 80);
      Serial.printf("\n\nHTTPUpdateServer ready! Open http://%s.local/update in your browser\n", host);
-     _otaUpdater.setUpdaterUi("Title", "SerialSBMS_Esp8266", "Build : 0.7.16", "Branch : master","Device info : ESP8266","Verarbeitung nur aufrufen, wenn Input vorhanden / Flag zum isrHandler hinzu, damit Funktion im Cache verbleibt");
-     _otaUpdater.setup(&server);
+     _otaUpdater.setUpdaterUi("Title", "SBMS120 Solar Charger", "Build : 0.7.23", "Branch : master","Device info : ukn","mySerial.readString usage; Laengenpruefung sread; Reconnect on close;Integration ReconnectingWebSocket; Reparaturversuch, Debugschalter zu setzen");
+     _otaUpdater.setup(&server);; 
   } else {
      Serial.println("Flash OTA programming only possible with 4Mb Flash size!!!");
   }

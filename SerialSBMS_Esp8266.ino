@@ -1,12 +1,11 @@
 #include <SoftwareSerial.h>
 #include <ESP8266WebServer.h>
-#include <ESP8266mDNS.h>
 #include <WebSocketsServer.h>
 
-#include <Ticker.h>
+//#include <Ticker.h>
 #include "MyWifi.h"
 #include "webpage.h"
-#include "config.h"
+//#include "config.h"
 #include "SBMS.h"
 #include "Taster.h"
 #include "Relay.h"
@@ -15,20 +14,20 @@
 
 OTA ota;
 SBMS sbms;
-CFG config;
+//CFG config;
 MyWifi myWifi;
 Battery battery;
 ESP8266WebServer server(80);
 WebSocketsServer wsServer = WebSocketsServer(81);
 
 //client connected to send?
-volatile bool ready = false;
+bool ready = false;
 
 uint8_t clientCount = 0;
 uint8_t clients[256] = { -1};
 bool notifiedNoClient = false;
 
-Ticker ticker;
+//Ticker ticker;
 int counter = 0;
 
 bool debug = false;
@@ -39,10 +38,11 @@ int cv[8]; //aktuelle Zellspannungen
 //Empfangstimeout ( wird 10s nichts empfangen, muss die Batterie abgeschaltet werden )
 long timeout = 10000;
 unsigned long lastReceivedMillis = -1;
+unsigned long lastCheckedMillis = -1;
 
 //findet die Interruptmethode falsche Werte vor, so wird noch einmal
 //(4s) gewartet, bevor diese tatsächlich zu einem Fehler führen.
-volatile int failureCount = 0;
+int failureCount = 0;
 const int errLimit = 5;
 
 unsigned long wsServerLastSend = -1;
@@ -361,7 +361,8 @@ void evaluate(String& sread) {
 
    Aktuell
 */
-void ICACHE_RAM_ATTR isrHandler()  {
+//void ICACHE_RAM_ATTR isrHandler()  {
+void checkValues() {
   if (soc < 0) return; //die Main-Loop sollte erstmal Werte lesen
 
   /*if(testFixed) {
@@ -553,7 +554,7 @@ void setup() {
   Serial.println("Starting...");
 
   //lese SPIFFS config file system
-  config.init(battery);
+  //config.init(battery);
 
   //Pins fuer Taster und Relay initialisieren
   pinMode(TASTER, INPUT);
@@ -583,7 +584,7 @@ void setup() {
   server.begin();
 
   // start interrupt timer method (Ticker, nicht Timer)
-  ticker.attach(4, isrHandler);
+  //ticker.attach(4, isrHandler);
 
   //Initialize Ticker mit Timer (nicht Ticker) every 4s
   //timer1_attachInterrupt(isrHandler);
@@ -603,4 +604,7 @@ void loop() {
   wsServer.loop();
   server.handleClient();
   readSbms();
+  if (( millis() - lastCheckedMillis ) > 3000) { //Pruefung hoechstens alle 3 Sekunden
+      checkValues();
+  }
 }

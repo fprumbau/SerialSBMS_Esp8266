@@ -194,15 +194,16 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length
       if (debug) {
         Serial.printf("[Client %u] received: %s\n", num, payload);
       }
-
-      if (payload[0] == '@') {
-        if (payload[1] == '+') {
-          starteBatterie("Websockets");
-        } else if (payload[1] == '-') {
-          starteNetzvorrang("Websockets");
-        }
-        if (payload[1] == 'd') {
-          toggleDebug(payload);
+      if(length > 1) {
+        if (payload[0] == '@') {
+          if (payload[1] == '+') {
+            starteBatterie("Websockets");
+          } else if (payload[1] == '-') {
+            starteNetzvorrang("Websockets");
+          }
+          if (payload[1] == 'd' && length > 4) {
+            toggleDebug(payload);
+          }
         }
       }
       break;

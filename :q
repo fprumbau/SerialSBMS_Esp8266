@@ -1,0 +1,11 @@
+core.repositoryformatversion=0
+core.filemode=true
+core.bare=false
+core.logallrefupdates=true
+remote.origin.url=https://github.com/fprumbau/SerialSBMS_Esp8266.git
+remote.origin.fetch=+refs/heads/*:refs/remotes/origin/*
+branch.master.remote=origin
+branch.master.merge=refs/heads/master
+user.name=fprumbau
+user.password=Atacama13!
+user.email=fprumbau@gmail.com

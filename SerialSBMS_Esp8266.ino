@@ -71,7 +71,7 @@ void sbmsPage() {
   String connStr = "var connection = new ReconnectingWebSocket('ws://";
   connStr += myWifi.getIpAddress();
   //connStr += ":81/', ['arduino']);"; //für new WebSocket('ws..
-  connStr += ":81/', null, { debug:true, reconnectInterval: 6000 });";
+  connStr += ":81/', null, { debug:true, reconnectInterval: 6000, reconnectDecay: 1.1, maxReconnectInterval: 10000 });";
   int s4 = connStr.length();
 
   long totalSize = s1 + s2 + s3 + s4;

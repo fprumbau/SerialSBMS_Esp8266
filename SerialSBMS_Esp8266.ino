@@ -514,7 +514,7 @@ void starteBatterie(String reason) {
 
    attachInterrupt(digitalPinToInterrupt(TASTER), handleButton, RISING);
 */
-void handleButton() {
+void ICACHE_RAM_ATTR handleButton() {
   if (debug) Serial.println("Button pressed");
 
   if ((millis() - tasterZeit) > entprellZeit) {
@@ -605,6 +605,7 @@ void loop() {
   server.handleClient();
   readSbms();
   if (( millis() - lastCheckedMillis ) > 3000) { //Pruefung hoechstens alle 3 Sekunden
+      lastCheckedMillis = millis();
       checkValues();
   }
 }
